@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心不全ケアとデジタルヘルス・クイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-rose-50 min-h-screen flex items-center justify-center p-4">
+
+<div id="app" class="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-100">
+    <!-- Header -->
+    <div class="bg-rose-600 p-6 text-white text-center">
+        <h1 class="text-xl font-bold">心不全ケアと服薬通知クイズ</h1>
+        <p class="text-rose-100 text-sm mt-1 text-balance">デジタル技術で命を救う仕組みを学ぼう</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="h-1.5 bg-rose-100">
+        <div id="progress" class="h-full bg-rose-500 transition-all duration-500" style="width: 0%"></div>
+    </div>
+
+    <div id="quiz-container" class="p-8">
+        <!-- Start Screen -->
+        <div id="start-screen" class="text-center space-y-6">
+            <div class="text-6xl mb-4">❤️</div>
+            <h2 class="text-2xl font-bold text-slate-800">クイズをはじめる</h2>
+            <p class="text-slate-600 leading-relaxed text-sm">
+                心不全治療における薬の大切さと、最新のSMS（ショートメッセージ）通知の効果についての10問のクイズです。
+            </p>
+            <button onclick="startQuiz()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl transition duration-300 transform hover:scale-[1.02] shadow-lg">
+                挑戦する
+            </button>
+        </div>
+
+        <!-- Question Screen -->
+        <div id="question-screen" class="hidden fade-in space-y-6">
+            <div class="flex justify-between items-center text-xs font-bold text-rose-600 tracking-widest">
+                <span id="question-number">QUESTION 1 / 10</span>
+                <span id="score-display">SCORE: 0</span>
+            </div>
+            <h3 id="question-text" class="text-lg font-bold text-slate-800 leading-snug min-h-[3rem]"></h3>
+            
+            <div id="options-container" class="grid gap-3"></div>
+
+            <div id="feedback" class="hidden p-4 rounded-2xl text-sm leading-relaxed border-l-4"></div>
+
+            <button id="next-btn" onclick="nextQuestion()" class="hidden w-full bg-slate-800 hover:bg-black text-white font-bold py-4 rounded-2xl transition shadow-md">
+                次の問題へ
+            </button>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden text-center space-y-6 fade-in">
+            <div id="result-icon" class="text-7xl"></div>
+            <h2 class="text-3xl font-bold text-slate-800">スコア発表</h2>
+            <div class="py-8 px-4 bg-rose-50 rounded-3xl border border-rose-100">
+                <p class="text-rose-600 font-bold text-sm mb-2">正解数</p>
+                <p id="final-score" class="text-6xl font-black text-rose-700"></p>
+            </div>
+            <p id="result-message" class="text-slate-600 font-medium"></p>
+            <button onclick="location.reload()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl transition">
+                もう一度チャレンジ
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            q: "心不全（HF）という病気の状態を、記事ではどのように定義していますか？",
+            options: ["心臓が全身に十分な血液を送り出すことができなくなった状態", "心臓の鼓動が完全に止まってしまった状態", "冠動脈が詰まって心筋が壊死した状態", "血圧が急激に上昇し、脳出血を起こした状態"],
+            correct: 0,
+            rationale: "心不全は、心臓がポンプとしての役割を十分に果たせなくなり、全身の臓器に血流を届けられなくなる状態を指します。"
+        },
+        {
+            q: "生涯のうちに心不全を発症するリスクは、およそ何人に1人とされていますか？",
+            options: ["10人に1人", "4人に1人", "2人に1人", "100人に1人"],
+            correct: 1,
+            rationale: "最新のデータでは、生涯リスクが増加しており、およそ4人に1人が発症すると推定されています。"
+        },
+        {
+            q: "心不全の薬を指示通りに服用できていない患者は、およそ何割に達していますか？",
+            options: ["約10〜20%", "約40〜50%", "約80%", "ほぼ0%"],
+            correct: 1,
+            rationale: "複数の研究により、4割以上の患者が服薬を継続できていないという深刻な実態が浮き彫りになっています。"
+        },
+        {
+            q: "ケビン・シャー博士によると、心不全において「わずかな服薬の欠如」がもたらす直接的な結果は何ですか？",
+            options: ["症状の悪化", "体重の減少", "視力の低下", "感染症の予防"],
+            correct: 0,
+            rationale: "心不全治療は継続性が命であり、わずかな飲み忘れがむくみや息切れなどの症状悪化に直結します。"
+        },
+        {
+            q: "テキストメッセージに反応した患者の「処方薬の受け取り率（フィル率）」は、反応しなかった患者と比べてどうなりましたか？",
+            options: ["19%上昇した", "変化はなかった", "10%低下した", "50%上昇した"],
+            correct: 0,
+            rationale: "デジタルな「ナッジ（きっかけ）」により、19%も多くの患者が実際に薬を受け取ることができました。"
+        },
+        {
+            q: "この研究で使用されたテキストメッセージの「ナッジ（きっかけ）」には、何が含まれていましたか？",
+            options: ["薬局へ行くためのタクシー配車リンク", "処方薬の情報、教育コンテンツ、費用補助へのリンク", "主治医とのビデオ通話ボタン", "食事メニューの提案"],
+            correct: 1,
+            rationale: "単なる通知だけでなく、薬の重要性を学ぶコンテンツや、費用面でのサポート情報が統合されていました。"
+        },
+        {
+            q: "実際にテキストメッセージをクリックして情報を確認した人の割合はどのくらいでしたか？",
+            options: ["約50%", "92%", "10%未満", "100%"],
+            correct: 1,
+            rationale: "92%という驚異的なクリック率を記録しており、SMSという手段が患者にとって非常に身近であることを示しています。"
+        },
+        {
+            q: "特にどのような経験をした患者において、薬の受け取り率が52%も向上しましたか？",
+            options: ["初めて薬を処方されたばかりの患者", "過去に再入院を経験したことのある患者", "若年層の患者", "都市部に住む患者"],
+            correct: 1,
+            rationale: "入院という辛い経験をした患者ほど、デジタルのサポートをより熱心に活用する傾向が見られました。"
+        },
+        {
+            q: "リマインダーの手法として「専用アプリ」ではなく「SMS」を選んだ主な理由は何ですか？",
+            options: ["資金不足のため", "ダウンロードやログインの手間がなく、誰でも使い慣れているから", "SMSの方が画像が綺麗だから", "AIの好みだったから"],
+            correct: 1,
+            rationale: "新しいアプリを導入するハードルを避け、既存のインフラであるSMSを使うことで、誰でも迷わず利用できる設計にしました。"
+        },
+        {
+            q: "シャー博士は、服薬継続のためにリマインダー以外に何が必要だと述べていますか？",
+            options: ["高度な手術の提供", "薬剤師の関与、教育プログラム、費用の負担軽減策など", "より多くのテレビCMの放映", "病院への完全な長期入院"],
+            correct: 1,
+            rationale: "デジタル通知は強力ですが、薬が買えない、または必要性を理解していないといった根本原因を解決する包括的支援が不可欠です。"
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let isAnswered = false;
+
+    function startQuiz() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('question-screen').classList.remove('hidden');
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        isAnswered = false;
+        const q = quizData[currentIdx];
+        document.getElementById('question-number').innerText = `QUESTION ${currentIdx + 1} / ${quizData.length}`;
+        document.getElementById('question-text').innerText = q.q;
+        document.getElementById('progress').style.width = `${(currentIdx / quizData.length) * 100}%`;
+        
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        q.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-left p-4 rounded-2xl border-2 border-slate-100 hover:border-rose-400 hover:bg-rose-50 transition-all duration-200 font-medium text-slate-700 shadow-sm";
+            btn.innerText = opt;
+            btn.onclick = () => selectOption(i);
+            container.appendChild(btn);
+        });
+        
+        document.getElementById('feedback').classList.add('hidden');
+        document.getElementById('next-btn').classList.add('hidden');
+    }
+
+    function selectOption(idx) {
+        if (isAnswered) return;
+        isAnswered = true;
+        
+        const q = quizData[currentIdx];
+        const correct = idx === q.correct;
+        if (correct) score++;
+
+        const btns = document.getElementById('options-container').children;
+        btns[idx].classList.remove('border-slate-100', 'hover:border-rose-400', 'hover:bg-rose-50');
+        
+        if (correct) {
+            btns[idx].classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+        } else {
+            btns[idx].classList.add('border-red-500', 'bg-red-50', 'text-red-700');
+            btns[q.correct].classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+        }
+
+        const fb = document.getElementById('feedback');
+        fb.innerText = q.rationale;
+        fb.className = `p-4 rounded-2xl text-sm leading-relaxed border-l-4 ${correct ? 'bg-green-100 text-green-800 border-green-500' : 'bg-red-100 text-red-800 border-red-500'}`;
+        fb.classList.remove('hidden');
+        
+        document.getElementById('next-btn').classList.remove('hidden');
+        document.getElementById('score-display').innerText = `SCORE: ${score}`;
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            renderQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('progress').style.width = '100%';
+        document.getElementById('question-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        
+        document.getElementById('final-score').innerText = `${score} / ${quizData.length}`;
+        const msg = document.getElementById('result-message');
+        const icon = document.getElementById('result-icon');
+
+        if (score === 10) {
+            msg.innerText = "完璧です！心不全ケアのスペシャリストですね！";
+            icon.innerText = "❤️✨";
+        } else if (score >= 7) {
+            msg.innerText = "素晴らしい！デジタルヘルスの重要性を深く理解しています。";
+            icon.innerText = "👍🌟";
+        } else {
+            msg.innerText = "お疲れ様でした！もう一度復習して理解を深めましょう。";
+            icon.innerText = "📖🌱";
+        }
+    }
+</script>
+
+</body>
+</html>
